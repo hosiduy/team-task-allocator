@@ -1,0 +1,15 @@
+Task/Feature,Link,Requirement Elicitation,Tech Skill,Biz Skill,Doc Skill,Comm Skill,Critical Thinking: (Logic) Tư duy phản biện ,Problem-Solving,UI/UX skill,Presentation skill,Max Complexity,Final SP,Assignee,Skill gap check,Suitability Score,Status,Reviewer,Review Focus,Reviewer matching
+[Syrix Help Desk] MCP integration,XCOR-18024,3,4,3,3,3,3,3,4,3,4,5,Anh Trinh,⚠️UI/UX,3,CẦN REVIEW,Duy Ho,"Focus: Tech, UI/UX",✅ Hợp lệ
+[Syrix Help Desk] Landing page,XCOR-18036,3,1,3,3,3,3,2,4,3,4,5,Anh Trinh,⚠️UI/UX,7,CẦN REVIEW,Duy Ho,Focus: UI/UX,✅ Hợp lệ
+[Syrix Help Desk] Monitor usage system for billing,XCOR-18042,2,3,2,2,2,2,3,3,3,3,3,Anh Trinh,⚠️UI/UX,10,TỰ QUYẾT,,,—
+Metric widget report on user dashboard,XCOR-19144,4,3,3,4,4,4,3,3,3,4,5,Nhu Nguyen,"⚠️Req, ⚠️Tech, ⚠️UI/UX",-1,CẦN REVIEW,Duy Ho,"Focus: Req, Doc, Comm, Critical",✅ Hợp lệ
+[Eisenhower] Business flows,XCOR-19149,3,3,2,2,3,2,3,1,1,3,3,Tin Nguyen,"⚠️Req, ⚠️Tech, ⚠️Comm",3,CẦN REVIEW,Anh Trinh,"Focus: Req, Tech, Comm, ProbSol",✅ Hợp lệ
+Update system licenses plan,XCOR-19156,2,1,3,2,2,2,2,3,2,3,3,Nhu Nguyen,⚠️UI/UX,11,TỰ QUYẾT,,,—
+[AI-Chat] Implement RAG,XCOR-19167,4,4,2,3,3,3,3,2,3,4,5,Duy Ho,,8,TỰ QUYẾT,,,—
+[AI-Chat] Implement MCP,XCOR-19170,3,2,2,3,3,3,3,2,3,3,3,Duy Ho,,11,TỰ QUYẾT,,,—
+[AI-Chat] Implement Syrix Factory,XCOR-19173,5,4,2,3,4,4,4,3,3,5,8,Duy Ho,⚠️Req,3,TỰ QUYẾT,,,—
+Auto update parent task progress on children progress update,XCOR-18087,2,2,2,1,1,2,3,1,1,3,3,Hanh Nguyen,⚠️ProbSol,7,CẦN REVIEW,Anh Trinh,Focus: ProbSol,✅ Hợp lệ
+Support a Cơ các câu hỏi liên quan đến KH,XCOR-19393,3,1,3,3,3,3,2,1,1,3,3,Nhu Nguyen,,10,TỰ QUYẾT,,,—
+The paths in the breadcrumb and the sidebar do not match.,XCOR-18681,1,1,1,2,2,3,2,2,2,3,3,Siu Tran,,4,CẦN REVIEW,Nhu Nguyen,Focus: Critical,✅ Hợp lệ
+Implement Expand/Collapse for Right Panel in Backlog,XCOR-19679,1,1,1,2,2,2,2,2,1,2,2,Siu Tran,,6,CẦN REVIEW,Nhu Nguyen,"Focus: Doc, Comm, Critical, ProbSol, UI/UX",✅ Hợp lệ
+Cải thiện hệ thống và nội dung thông báo (Notifications),XCOR-19947,3,1,2,2,2,2,2,3,2,3,3,Hanh Nguyen,"⚠️Req, ⚠️UI/UX",3,CẦN REVIEW,Nhu Nguyen,"Focus: Req, UI/UX",✅ Hợp lệ
