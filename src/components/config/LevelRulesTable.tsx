@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStorage } from '../../context/StorageContext';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';

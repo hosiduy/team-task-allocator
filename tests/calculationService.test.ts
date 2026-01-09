@@ -64,21 +64,18 @@ describe('Calculation Service Property Tests', () => {
     it('should return MAX of all complexity values', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          (skillMeta) => {
-            return fc.pre(skillMeta.length > 0) && fc.property(
-              taskArb(skillMeta),
-              (task) => {
+            fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }).chain(skillMeta =>
+                taskArb(skillMeta).map(task => ({ skillMeta, task }))
+            ),
+            ({ task }) => {
                 const maxComplexity = calculateMaxComplexity(task);
                 const complexityValues = Object.values(task.complexity);
                 const expectedMax = complexityValues.length > 0 ? Math.max(...complexityValues) : 0;
-                
+
                 expect(maxComplexity).toBe(expectedMax);
                 expect(maxComplexity).toBeGreaterThanOrEqual(0);
                 expect(maxComplexity).toBeLessThanOrEqual(5);
-              }
-            );
-          }
+            }
         ),
         { numRuns: 100 }
       );
@@ -89,28 +86,29 @@ describe('Calculation Service Property Tests', () => {
     it('should detect exactly those skills where member < task', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          (skillMeta) => {
-            return fc.pre(skillMeta.length > 0) && fc.property(
-              fc.tuple(memberArb(skillMeta), taskArb(skillMeta)),
-              ([member, task]) => {
+            fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }).chain(skillMeta =>
+                fc.tuple(memberArb(skillMeta), taskArb(skillMeta)).map(([member, task]) => ({
+                    skillMeta,
+                    member,
+                    task
+                }))
+            ),
+            ({ skillMeta, member, task }) => {
                 const gaps = calculateSkillGaps(member, task, skillMeta);
-                
+
                 // Count expected gaps
                 const expectedGaps = skillMeta.filter(skill => {
-                  const memberSkill = member.skills[skill.id] || 0;
-                  const taskComplexity = task.complexity[skill.id] || 0;
-                  return taskComplexity > 0 && memberSkill < taskComplexity;
+                    const memberSkill = member.skills[skill.id] || 0;
+                    const taskComplexity = task.complexity[skill.id] || 0;
+                    return taskComplexity > 0 && memberSkill < taskComplexity;
                 });
-                
+
                 expect(gaps.length).toBe(expectedGaps.length);
-                
+
                 // Check format
                 gaps.forEach(gap => {
-                  expect(gap).toMatch(/^⚠️.+/);
+                    expect(gap).toMatch(/^⚠️.+/);
                 });
-              }
-            );
           }
         ),
         { numRuns: 100 }
@@ -122,29 +120,33 @@ describe('Calculation Service Property Tests', () => {
     it('should correctly determine TỰ QUYẾT or CẦN REVIEW', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          fc.array(configRuleArb, { minLength: 1, maxLength: 5 }),
-          (skillMeta, configRules) => {
-            return fc.pre(skillMeta.length > 0 && configRules.length > 0) && fc.property(
-              fc.tuple(memberArb(skillMeta), taskArb(skillMeta)),
-              ([member, task]) => {
+            fc.tuple(
+              fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
+              fc.array(configRuleArb, { minLength: 1, maxLength: 5 })
+          ).chain(([skillMeta, configRules]) =>
+              fc.tuple(memberArb(skillMeta), taskArb(skillMeta)).map(([member, task]) => ({
+                  skillMeta,
+                  configRules,
+                  member,
+                  task
+              }))
+          ),
+            ({ member, task, configRules }) => {
                 const maxComplexity = calculateMaxComplexity(task);
                 const status = calculateReviewStatus(member, maxComplexity, configRules);
-                
+
                 const rule = configRules.find(r => r.levelName === member.currentLevel);
-                
+
                 if (rule) {
-                  if (maxComplexity <= rule.maxSPSelf) {
-                    expect(status).toBe('TỰ QUYẾT');
-                  } else {
-                    expect(status).toBe('CẦN REVIEW');
-                  }
+                    if (maxComplexity <= rule.maxSPSelf) {
+                        expect(status).toBe('TỰ QUYẾT');
+                    } else {
+                        expect(status).toBe('CẦN REVIEW');
+                    }
                 } else {
-                  expect(status).toBe('CẦN REVIEW');
+                    expect(status).toBe('CẦN REVIEW');
                 }
-              }
-            );
-          }
+            }
         ),
         { numRuns: 100 }
       );
@@ -155,22 +157,22 @@ describe('Calculation Service Property Tests', () => {
     it('should ensure all skills exist in all members after sync', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          (skillMeta) => {
-            return fc.pre(skillMeta.length > 0) && fc.property(
-              fc.array(memberArb(skillMeta), { minLength: 1, maxLength: 10 }),
-              (members) => {
+            fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }).chain(skillMeta =>
+                fc.array(memberArb(skillMeta), { minLength: 1, maxLength: 10 }).map(members => ({
+                    skillMeta,
+                    members
+                }))
+            ),
+            ({ skillMeta, members }) => {
                 const syncedMembers = syncSkills(members, skillMeta);
-                
+
                 syncedMembers.forEach(member => {
-                  skillMeta.forEach(skill => {
-                    expect(member.skills).toHaveProperty(skill.id);
-                    expect(typeof member.skills[skill.id]).toBe('number');
-                  });
+                    skillMeta.forEach(skill => {
+                        expect(member.skills).toHaveProperty(skill.id);
+                        expect(typeof member.skills[skill.id]).toBe('number');
+                    });
                 });
-              }
-            );
-          }
+            }
         ),
         { numRuns: 100 }
       );
@@ -220,22 +222,23 @@ describe('Calculation Service Property Tests', () => {
     it('should calculate sum of (member - task) for all skills', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          (skillMeta) => {
-            return fc.pre(skillMeta.length > 0) && fc.property(
-              fc.tuple(memberArb(skillMeta), taskArb(skillMeta)),
-              ([member, task]) => {
+            fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }).chain(skillMeta =>
+                fc.tuple(memberArb(skillMeta), taskArb(skillMeta)).map(([member, task]) => ({
+                    skillMeta,
+                    member,
+                    task
+                }))
+            ),
+            ({ skillMeta, member, task }) => {
                 const score = calculateSuitabilityScore(member, task, skillMeta);
-                
+
                 const expectedScore = skillMeta.reduce((sum, skill) => {
-                  const memberSkill = member.skills[skill.id] || 0;
-                  const taskComplexity = task.complexity[skill.id] || 0;
-                  return sum + (memberSkill - taskComplexity);
+                    const memberSkill = member.skills[skill.id] || 0;
+                    const taskComplexity = task.complexity[skill.id] || 0;
+                    return sum + (memberSkill - taskComplexity);
                 }, 0);
-                
+
                 expect(score).toBe(expectedScore);
-              }
-            );
           }
         ),
         { numRuns: 100 }
@@ -245,33 +248,30 @@ describe('Calculation Service Property Tests', () => {
     it('should allow negative scores', () => {
       fc.assert(
         fc.property(
-          fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }),
-          (skillMeta) => {
-            return fc.pre(skillMeta.length > 0) && fc.property(
-              memberArb(skillMeta),
-              (member) => {
+            fc.array(skillMetaArb, { minLength: 1, maxLength: 10 }).chain(skillMeta =>
+                memberArb(skillMeta).map(member => ({ skillMeta, member }))
+            ),
+            ({ skillMeta, member }) => {
                 // Create a task with all complexities at max
                 const task: Task = {
-                  id: 'test',
-                  name: 'Test',
-                  link: '',
-                  finalSP: 10,
-                  assignee: member.name,
-                  complexity: Object.fromEntries(skillMeta.map(s => [s.id, 5])),
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString()
+                    id: 'test',
+                    name: 'Test',
+                    link: '',
+                    finalSP: 10,
+                    assignee: member.name,
+                    complexity: Object.fromEntries(skillMeta.map(s => [s.id, 5])),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
                 };
-                
+
                 // Set member skills to min
                 const weakMember: Member = {
-                  ...member,
-                  skills: Object.fromEntries(skillMeta.map(s => [s.id, 0]))
+                    ...member,
+                    skills: Object.fromEntries(skillMeta.map(s => [s.id, 0]))
                 };
-                
+
                 const score = calculateSuitabilityScore(weakMember, task, skillMeta);
                 expect(score).toBeLessThanOrEqual(0);
-              }
-            );
           }
         ),
         { numRuns: 50 }

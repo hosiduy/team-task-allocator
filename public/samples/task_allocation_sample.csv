@@ -1,0 +1,6 @@
+Task Name,Link,Final SP,Assignee,Requirement Elicitation,Technical Design,UI/UX Design,Testing,Documentation
+Implement Login Feature,XCOR-18024,3,Nguyễn Văn A,3,4,2,3,2
+Design Dashboard UI,XCOR-18025,5,Trần Thị B,2,1,5,2,3
+Setup Database Schema,XCOR-18026,3,Lê Văn C,2,5,1,3,4
+Write API Documentation,XCOR-18027,2,Phạm Thị D,1,2,1,1,5
+Create Unit Tests,XCOR-18028,4,Hoàng Văn E,2,3,1,5,3

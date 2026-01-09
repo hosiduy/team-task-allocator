@@ -1,10 +1,10 @@
-import React from 'react';
+
 import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: React.ReactNode;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -32,7 +32,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         <div className={`relative bg-white rounded-xl shadow-xl w-full ${sizeStyles[size]} max-h-[90vh] flex flex-col`}>
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+            <div className="text-xl font-semibold text-gray-900">{title}</div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"

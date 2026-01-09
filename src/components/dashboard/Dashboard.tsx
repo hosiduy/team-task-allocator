@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { StatsOverview } from './StatsOverview';
 import { ImportSection } from './ImportSection';
 import { Button } from '../common/Button';

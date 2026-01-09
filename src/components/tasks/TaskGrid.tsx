@@ -1,41 +1,58 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useStorage } from '../../context/StorageContext';
+import { useTableState } from '../../hooks/useTableState';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { StatusBadge } from '../common/StatusBadge';
-import { Plus, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Search, Eye } from 'lucide-react';
+import { CreateTaskModal } from './CreateTaskModal';
+import { TaskDetailModal } from './TaskDetailModal';
+import { ColumnVisibility } from '../table/ColumnVisibility';
+import { TableFilter } from '../table/TableFilter';
+import { TableHeaderCell } from '../table/TableHeaderCell';
 import { calculateTaskData } from '../../services/calculationService';
 import type { Task, ComputedTaskData } from '../../types';
 import {
   useReactTable,
-  getCoreRowModel,
+  getCoreRowModel,    
   getSortedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   flexRender,
-  createColumnHelper,
-  type SortingState,
-  type ColumnFiltersState
+  createColumnHelper
 } from '@tanstack/react-table';
 
 type TaskWithComputed = Task & { computed: ComputedTaskData };
 
 export function TaskGrid() {
   const { state, dispatch } = useStorage();
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const {
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+    columnVisibility,
+    setColumnVisibility,
+    globalFilter,
+    setGlobalFilter
+  } = useTableState('taskGridState');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingCell, setEditingCell] = useState<{ taskId: string; field: string } | null>(null);
+  const [showCompleted, setShowCompleted] = useState(true);
 
   const columnHelper = createColumnHelper<TaskWithComputed>();
 
   // Calculate computed data for all tasks
   const tasksWithComputed: TaskWithComputed[] = useMemo(() => {
-    return state.tasks.map(task => ({
+    const allTasks = state.tasks.map(task => ({
       ...task,
       computed: calculateTaskData(task, state.members, state.configRules, state.skillMeta)
     }));
-  }, [state.tasks, state.members, state.configRules, state.skillMeta]);
+    
+    // Filter by completion status
+    return showCompleted ? allTasks : allTasks.filter(t => !t.completed);
+  }, [state.tasks, state.members, state.configRules, state.skillMeta, showCompleted]);
 
   const handleUpdate = (task: Task, field: keyof Task, value: string | number) => {
     const updated: Task = {
@@ -64,30 +81,17 @@ export function TaskGrid() {
     }
   };
 
-  const handleAddTask = () => {
-    const name = prompt('Tên công việc:');
-    if (!name) return;
-
-    const link = prompt('Link (ví dụ: XCOR-123):') || '';
-    const finalSP = parseFloat(prompt('Story Points:') || '0') || 0;
-
-    const complexity: Record<string, number> = {};
-    state.skillMeta.forEach(skill => {
-      complexity[skill.id] = 0;
-    });
-
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      name,
-      link,
-      finalSP,
-      assignee: '',
-      complexity,
-      createdAt: new Date().toISOString(),
+  const handleToggleComplete = (task: Task) => {
+    const updated: Task = {
+      ...task,
+      completed: !task.completed,
       updatedAt: new Date().toISOString()
     };
+    dispatch({ type: 'UPDATE_TASK', payload: updated });
+  };
 
-    dispatch({ type: 'ADD_TASK', payload: newTask });
+  const handleAddTask = () => {
+    setShowCreateModal(true);
   };
 
   const columns = useMemo(() => {
@@ -131,13 +135,15 @@ export function TaskGrid() {
       }),
       columnHelper.accessor('link', {
         header: 'Link',
-        cell: ({ row, getValue }) => {
+        cell: ({ getValue }) => {
           const link = getValue();
-          return link ? (
-            <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+          if (!link) return '—';
+          const fullUrl = link.startsWith('http') ? link : `https://xperc.xcorp.app/en/task-mgmt/tasks/${link}`;
+          return (
+            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
               {link}
             </a>
-          ) : '—';
+          );
         }
       })
     ];
@@ -146,7 +152,15 @@ export function TaskGrid() {
     const complexityColumns = state.skillMeta.map(skill =>
       columnHelper.display({
         id: `complexity_${skill.id}`,
-        header: skill.shortName,
+        header: ({ header }) => (
+          <TableHeaderCell 
+            header={header} 
+            tooltip={skill.taskDescription}
+          />
+        ),
+        meta: {
+          headerLabel: skill.shortName
+        },
         cell: ({ row }) => {
           const isEditing = editingCell?.taskId === row.original.id && editingCell.field === `complexity_${skill.id}`;
           const value = row.original.complexity[skill.id] || 0;
@@ -284,7 +298,43 @@ export function TaskGrid() {
       columnHelper.display({
         id: 'reviewer',
         header: 'Reviewer',
-        cell: ({ row }) => row.original.computed.reviewer || '—'
+        cell: ({ row }) => {
+          const isEditing = editingCell?.taskId === row.original.id && editingCell.field === 'reviewer';
+          const currentReviewer = row.original.computed.reviewer || '';
+          
+          if (isEditing) {
+            return (
+              <select
+                defaultValue={currentReviewer}
+                onBlur={() => {
+                  // Lưu reviewer vào task metadata hoặc field tùy chỉnh
+                  setEditingCell(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+                autoFocus
+                className="w-full p-1 border rounded"
+              >
+                <option value="">-- Chọn reviewer --</option>
+                {state.members.map(m => (
+                  <option key={m.id} value={m.name}>{m.name}</option>
+                ))}
+              </select>
+            );
+          }
+          
+          return (
+            <div
+              className="cursor-pointer hover:bg-gray-50 p-2 rounded"
+              onClick={() => setEditingCell({ taskId: row.original.id, field: 'reviewer' })}
+            >
+              {currentReviewer || '—'}
+            </div>
+          );
+        }
       }),
       columnHelper.display({
         id: 'reviewFocus',
@@ -312,15 +362,35 @@ export function TaskGrid() {
     // Add actions column
     const actionsColumn = columnHelper.display({
       id: 'actions',
-      header: '',
+      header: 'Hành động',
       cell: ({ row }) => (
-        <button
-          onClick={() => handleDelete(row.original.id)}
-          className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-          title="Xóa"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleToggleComplete(row.original)}
+            className={`p-1 rounded ${
+              row.original.completed 
+                ? 'text-gray-600 hover:bg-gray-50' 
+                : 'text-green-600 hover:bg-green-50'
+            }`}
+            title={row.original.completed ? 'Mở lại' : 'Hoàn thành'}
+          >
+            {row.original.completed ? '↺' : '✓'}
+          </button>
+          <button
+            onClick={() => setSelectedTask(row.original)}
+            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+            title="Xem chi tiết"
+          >
+            <Eye size={16} />
+          </button>
+          <button
+            onClick={() => handleDelete(row.original.id)}
+            className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+            title="Xóa"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       )
     });
 
@@ -333,15 +403,19 @@ export function TaskGrid() {
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
       globalFilter
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    enableSorting: true,
+    enableFilters: true,
     initialState: {
       pagination: {
         pageSize: 50
@@ -361,7 +435,7 @@ export function TaskGrid() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-center">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
@@ -372,6 +446,20 @@ export function TaskGrid() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+        
+        {/* Show Completed Toggle */}
+        <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showCompleted}
+            onChange={(e) => setShowCompleted(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm text-gray-700">Hiện đã hoàn thành</span>
+        </label>
+        
+        <TableFilter table={table} />
+        <ColumnVisibility table={table} />
       </div>
 
       {/* Table */}
@@ -420,32 +508,81 @@ export function TaskGrid() {
       )}
 
       {/* Pagination */}
-      {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-            {' - '}
-            Tổng {table.getFilteredRowModel().rows.length} công việc
+      {tasksWithComputed.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-700">
+              Hiển thị {table.getRowModel().rows.length} / {table.getFilteredRowModel().rows.length} công việc
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Số dòng:</label>
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={e => table.setPageSize(Number(e.target.value))}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeft size={16} />
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRight size={16} />
-            </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-700">
+              Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                ««
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                ‹
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                ›
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                »»
+              </Button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Create Task Modal */}
+      <CreateTaskModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+        />
       )}
     </div>
   );

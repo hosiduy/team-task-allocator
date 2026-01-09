@@ -1,24 +1,38 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useStorage } from '../../context/StorageContext';
+import { useTableState } from '../../hooks/useTableState';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Plus, Eye, Trash2 } from 'lucide-react';
 import { MemberProfile } from './MemberProfile';
+import { CreateMemberModal } from './CreateMemberModal';
 import { SyncSkillsButton } from './SyncSkillsButton';
+import { ColumnVisibility } from '../table/ColumnVisibility';
+import { TableFilter } from '../table/TableFilter';
+import { TableHeaderCell } from '../table/TableHeaderCell';
 import type { Member } from '../../types';
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
   flexRender,
-  createColumnHelper,
-  type SortingState
+  createColumnHelper
 } from '@tanstack/react-table';
 
 export function MemberTable() {
   const { state, dispatch } = useStorage();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const {
+    sorting,
+    setSorting,
+    columnFilters,
+    setColumnFilters,
+    columnVisibility,
+    setColumnVisibility
+  } = useTableState('memberTableState');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCell, setEditingCell] = useState<{ memberId: string; field: string } | null>(null);
 
   const columnHelper = createColumnHelper<Member>();
@@ -51,28 +65,7 @@ export function MemberTable() {
   };
 
   const handleAddMember = () => {
-    const name = prompt('Tên thành viên:');
-    if (!name) return;
-
-    const level = prompt('Cấp độ (ví dụ: Junior, Middle, Senior):');
-    if (!level) return;
-
-    const skills: Record<string, number> = {};
-    state.skillMeta.forEach(skill => {
-      skills[skill.id] = 0;
-    });
-
-    const newMember: Member = {
-      id: crypto.randomUUID(),
-      name,
-      currentLevel: level,
-      lastReviewDate: '',
-      skills,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    dispatch({ type: 'ADD_MEMBER', payload: newMember });
+    setShowCreateModal(true);
   };
 
   const columns = useMemo(() => {
@@ -161,7 +154,15 @@ export function MemberTable() {
     const skillColumns = state.skillMeta.map(skill =>
       columnHelper.display({
         id: `skill_${skill.id}`,
-        header: skill.shortName,
+        header: ({ header }) => (
+          <TableHeaderCell 
+            header={header} 
+            tooltip={skill.memberDescription}
+          />
+        ),
+        meta: {
+          headerLabel: skill.shortName
+        },
         cell: ({ row }) => {
           const isEditing = editingCell?.memberId === row.original.id && editingCell.field === `skill_${skill.id}`;
           const value = row.original.skills[skill.id] || 0;
@@ -236,11 +237,24 @@ export function MemberTable() {
     data: state.members,
     columns,
     state: {
-      sorting
+      sorting,
+      columnFilters,
+      columnVisibility
     },
     onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel()
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    enableSorting: true,
+    enableFilters: true,
+    initialState: {
+      pagination: {
+        pageSize: 20
+      }
+    }
   });
 
   return (
@@ -255,6 +269,12 @@ export function MemberTable() {
             Thêm thành viên
           </Button>
         </div>
+      </div>
+
+      {/* Table Controls */}
+      <div className="flex items-center gap-3">
+        <TableFilter table={table} />
+        <ColumnVisibility table={table} />
       </div>
 
       {/* Table */}
@@ -302,6 +322,69 @@ export function MemberTable() {
         </div>
       )}
 
+      {/* Pagination */}
+      {state.members.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-700">
+              Hiển thị {table.getRowModel().rows.length} / {table.getFilteredRowModel().rows.length} thành viên
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Số dòng:</label>
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={e => table.setPageSize(Number(e.target.value))}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-700">
+              Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                ««
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                ‹
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                ›
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                »»
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Member Profile Modal */}
       {selectedMember && (
         <MemberProfile
@@ -310,6 +393,12 @@ export function MemberTable() {
           onClose={() => setSelectedMember(null)}
         />
       )}
+
+      {/* Create Member Modal */}
+      <CreateMemberModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }

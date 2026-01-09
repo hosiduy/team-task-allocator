@@ -6,6 +6,8 @@ export interface SkillMeta {
   id: string;           // Unique identifier (UUID)
   name: string;         // Full name (e.g., "Requirement Elicitation")
   shortName: string;    // Short name for display (e.g., "Req")
+    memberDescription?: string; // Description for member skill tooltip
+    taskDescription?: string;   // Description for task complexity tooltip
   csvColumnName: string; // Original CSV column name for re-import
   createdAt: string;    // ISO timestamp
   updatedAt: string;    // ISO timestamp
@@ -30,6 +32,7 @@ export interface Task {
   finalSP: number;                   // Story points
   assignee: string;                  // Member name
   complexity: Record<string, number>; // skillId → value (1-5), dynamic based on SkillMeta
+    completed?: boolean;               // Task completion status
   createdAt: string;
   updatedAt: string;
 }

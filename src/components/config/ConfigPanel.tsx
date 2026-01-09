@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { LevelRulesTable } from './LevelRulesTable';
 import { SkillManager } from './SkillManager';
 

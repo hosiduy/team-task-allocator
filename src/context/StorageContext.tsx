@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import type { AppState, StorageAction, Member, Task, ConfigRule, SkillMeta } from '../types';
+import type { AppState, StorageAction, Member, Task } from '../types';
 import { STORAGE_KEYS } from '../types';
 
 const initialState: AppState = {
@@ -86,6 +86,11 @@ interface StorageContextType {
   saveToStorage: () => void;
   exportAll: () => string;
   exportToCSV: (type: 'members' | 'tasks' | 'config-rules') => string;
+  // Helper methods for modals
+  addMember: (member: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateMember: (id: string, updates: Partial<Member>) => void;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
 }
 
 const StorageContext = createContext<StorageContextType | undefined>(undefined);
@@ -169,6 +174,55 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state]);
 
+  // Helper methods for modal operations
+  const addMember = useCallback((member: Omit<Member, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newMember: Member = {
+      ...member,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    dispatch({ type: 'ADD_MEMBER', payload: newMember });
+  }, []);
+
+  const updateMember = useCallback((id: string, updates: Partial<Member>) => {
+    const existing = state.members.find(m => m.id === id);
+    if (existing) {
+      const updated: Member = {
+        ...existing,
+        ...updates,
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString()
+      };
+      dispatch({ type: 'UPDATE_MEMBER', payload: updated });
+    }
+  }, [state.members]);
+
+  const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newTask: Task = {
+      ...task,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    dispatch({ type: 'ADD_TASK', payload: newTask });
+  }, []);
+
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    const existing = state.tasks.find(t => t.id === id);
+    if (existing) {
+      const updated: Task = {
+        ...existing,
+        ...updates,
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString()
+      };
+      dispatch({ type: 'UPDATE_TASK', payload: updated });
+    }
+  }, [state.tasks]);
+
   // Load from storage on mount
   useEffect(() => {
     loadFromStorage();
@@ -182,7 +236,18 @@ export function StorageProvider({ children }: { children: React.ReactNode }) {
   }, [state, saveToStorage]);
 
   return (
-    <StorageContext.Provider value={{ state, dispatch, loadFromStorage, saveToStorage, exportAll, exportToCSV }}>
+    <StorageContext.Provider value={{ 
+      state, 
+      dispatch, 
+      loadFromStorage, 
+      saveToStorage, 
+      exportAll, 
+      exportToCSV,
+      addMember,
+      updateMember,
+      addTask,
+      updateTask
+    }}>
       {children}
     </StorageContext.Provider>
   );

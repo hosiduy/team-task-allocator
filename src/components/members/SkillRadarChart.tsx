@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { useStorage } from '../../context/StorageContext';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import type { Member } from '../../types';

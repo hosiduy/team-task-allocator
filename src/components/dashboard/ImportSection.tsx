@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FileDropzone } from '../common/FileDropzone';
 import { Button } from '../common/Button';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Download } from 'lucide-react';
 import { useStorage } from '../../context/StorageContext';
 import {
   parseConfigRules,
@@ -155,6 +155,21 @@ export function ImportSection() {
     }
   };
 
+  const handleDownloadSample = () => {
+    const sampleFiles = {
+      'members': '/samples/member_profile_sample.csv',
+      'tasks': '/samples/task_allocation_sample.csv',
+      'config-rules': '/samples/config_rules_sample.csv'
+    };
+
+    const link = document.createElement('a');
+    link.href = sampleFiles[importType];
+    link.download = sampleFiles[importType].split('/').pop() || 'sample.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -182,6 +197,18 @@ export function ImportSection() {
             size="sm"
           >
             Quy tắc
+          </Button>
+        </div>
+
+        {/* Download Sample Button */}
+        <div className="mb-4">
+          <Button
+            variant="secondary"
+            onClick={handleDownloadSample}
+            size="sm"
+          >
+            <Download size={16} className="mr-2" />
+            Tải file mẫu
           </Button>
         </div>
 

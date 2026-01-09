@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStorage } from '../../context/StorageContext';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
@@ -108,6 +108,8 @@ export function SkillManager() {
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Tên đầy đủ</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Tên ngắn</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Mô tả (Member)</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Mô tả (Task)</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Tên cột CSV</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Hành động</th>
             </tr>
@@ -134,6 +136,20 @@ export function SkillManager() {
                     </td>
                     <td className="px-4 py-3">
                       <Input
+                        value={editForm.memberDescription || ''}
+                        onChange={e => setEditForm({ ...editForm, memberDescription: e.target.value })}
+                        placeholder="Mô tả cho bảng Member"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
+                        value={editForm.taskDescription || ''}
+                        onChange={e => setEditForm({ ...editForm, taskDescription: e.target.value })}
+                        placeholder="Mô tả cho bảng Task"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
                         value={editForm.csvColumnName}
                         onChange={e => setEditForm({ ...editForm, csvColumnName: e.target.value })}
                         placeholder="Tên cột trong CSV"
@@ -154,6 +170,8 @@ export function SkillManager() {
                         {skill.shortName}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{skill.memberDescription || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{skill.taskDescription || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{skill.csvColumnName}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">

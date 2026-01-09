@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { StorageProvider } from './context/StorageContext';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { MemberTable } from './components/members/MemberTable';
-import { TaskGrid } from './components/tasks/TaskGrid';
 import { ConfigPanel } from './components/config/ConfigPanel';
+import { TaskGrid } from './components/tasks/TaskGrid';
 import { Home, Users, ClipboardList, Settings } from 'lucide-react';
 import './index.css';
 
-type Page = 'dashboard' | 'members' | 'tasks' | 'config';
-
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-
   const navigation = [
-    { id: 'dashboard' as Page, name: 'Dashboard', icon: Home },
-    { id: 'members' as Page, name: 'Thành viên', icon: Users },
-    { id: 'tasks' as Page, name: 'Công việc', icon: ClipboardList },
-    { id: 'config' as Page, name: 'Cấu hình', icon: Settings }
+    { path: '/', name: 'Dashboard', icon: Home },
+    { path: '/members', name: 'Thành viên', icon: Users },
+    { path: '/tasks', name: 'Công việc', icon: ClipboardList },
+    { path: '/config', name: 'Cấu hình', icon: Settings }
   ];
 
   return (
@@ -32,21 +28,23 @@ function AppContent() {
               <div className="ml-6 flex space-x-4">
                 {navigation.map(item => {
                   const Icon = item.icon;
-                  const isActive = currentPage === item.id;
                   
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => setCurrentPage(item.id)}
-                      className={`inline-flex items-center px-4 py-2 border-b-2 text-sm font-medium ${
-                        isActive
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.path === '/'}
+                      className={({ isActive }) => 
+                        `inline-flex items-center px-4 py-2 border-b-2 text-sm font-medium ${
+                          isActive
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`
+                      }
                     >
                       <Icon size={18} className="mr-2" />
                       {item.name}
-                    </button>
+                    </NavLink>
                   );
                 })}
               </div>
@@ -57,10 +55,13 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentPage === 'dashboard' && <Dashboard />}
-        {currentPage === 'members' && <MemberTable />}
-        {currentPage === 'tasks' && <TaskGrid />}
-        {currentPage === 'config' && <ConfigPanel />}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/members" element={<MemberTable />} />
+          <Route path="/tasks" element={<TaskGrid />} />
+          <Route path="/config" element={<ConfigPanel />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   );
@@ -68,9 +69,11 @@ function AppContent() {
 
 function App() {
   return (
-    <StorageProvider>
-      <AppContent />
-    </StorageProvider>
+    <BrowserRouter>
+      <StorageProvider>
+        <AppContent />
+      </StorageProvider>
+    </BrowserRouter>
   );
 }
 

@@ -67,7 +67,7 @@ export function calculateReviewStatus(
 export function suggestReviewers(
   members: Member[],
   assignee: Member | null,
-  task: Task,
+    _task: Task, // Reserved for future use
   maxComplexity: number,
   skillGaps: string[],
   skillMeta: SkillMeta[],
