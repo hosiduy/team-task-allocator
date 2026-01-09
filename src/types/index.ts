@@ -33,6 +33,7 @@ export interface Task {
   assignee: string;                  // Member name
   complexity: Record<string, number>; // skillId → value (1-5), dynamic based on SkillMeta
     completed?: boolean;               // Task completion status
+    reviewer?: string;                 // Manually assigned reviewer (overrides computed)
   createdAt: string;
   updatedAt: string;
 }
@@ -45,7 +46,7 @@ export interface ComputedTaskData {
   status: 'TỰ QUYẾT' | 'CẦN REVIEW';
   reviewer: string;                // Suggested reviewer name or empty
   reviewFocus: string;             // Format: "Focus: Tech, UI/UX" or empty
-  reviewerMatching: '✅ Hợp lệ' | '—';
+    reviewerMatching: '' | '✅ Hợp lệ' | '❌ Không hợp lệ' | '⚠️ Thiếu reviewer';
 }
 
 // Configuration rule per level (DYNAMIC - loaded from CSV or added via UI)

@@ -4,9 +4,10 @@ import { useTableState } from '../../hooks/useTableState';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { StatusBadge } from '../common/StatusBadge';
-import { Plus, Trash2, Search, Eye } from 'lucide-react';
+import { Plus, Trash2, Search, Eye, User } from 'lucide-react';
 import { CreateTaskModal } from './CreateTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
+import { MemberProfileModal } from '../members/MemberProfileModal';
 import { ColumnVisibility } from '../table/ColumnVisibility';
 import { TableFilter } from '../table/TableFilter';
 import { TableHeaderCell } from '../table/TableHeaderCell';
@@ -40,6 +41,7 @@ export function TaskGrid() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingCell, setEditingCell] = useState<{ taskId: string; field: string } | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [selectedMemberName, setSelectedMemberName] = useState<string | null>(null);
 
   const columnHelper = createColumnHelper<TaskWithComputed>();
 
@@ -214,11 +216,12 @@ export function TaskGrid() {
         header: 'Người thực hiện',
         cell: ({ row, getValue }) => {
           const isEditing = editingCell?.taskId === row.original.id && editingCell.field === 'assignee';
+          const assigneeName = getValue();
           
           if (isEditing) {
             return (
               <select
-                defaultValue={getValue()}
+                defaultValue={assigneeName}
                 onBlur={(e) => {
                   handleUpdate(row.original, 'assignee', e.target.value);
                   setEditingCell(null);
@@ -241,11 +244,22 @@ export function TaskGrid() {
           }
           
           return (
-            <div
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded"
-              onClick={() => setEditingCell({ taskId: row.original.id, field: 'assignee' })}
-            >
-              {getValue() || '—'}
+            <div className="flex items-center gap-2">
+              <div
+                className="cursor-pointer hover:bg-gray-50 p-2 rounded flex-1"
+                onClick={() => setEditingCell({ taskId: row.original.id, field: 'assignee' })}
+              >
+                {assigneeName || '—'}
+              </div>
+              {assigneeName && (
+                <button
+                  onClick={() => setSelectedMemberName(assigneeName)}
+                  className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+                  title="Xem profile"
+                >
+                  <User size={16} />
+                </button>
+              )}
             </div>
           );
         }
@@ -300,18 +314,23 @@ export function TaskGrid() {
         header: 'Reviewer',
         cell: ({ row }) => {
           const isEditing = editingCell?.taskId === row.original.id && editingCell.field === 'reviewer';
-          const currentReviewer = row.original.computed.reviewer || '';
+          // Prioritize manual reviewer over computed
+          const currentReviewer = row.original.reviewer || row.original.computed.reviewer || '';
           
           if (isEditing) {
             return (
               <select
                 defaultValue={currentReviewer}
-                onBlur={() => {
-                  // Lưu reviewer vào task metadata hoặc field tùy chỉnh
+                onBlur={(e) => {
+                  handleUpdate(row.original, 'reviewer', e.target.value);
+                  setEditingCell(null);
+                }}
+                onChange={(e) => {
+                  handleUpdate(row.original, 'reviewer', e.target.value);
                   setEditingCell(null);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
+                  if (e.key === 'Escape') {
                     setEditingCell(null);
                   }
                 }}
@@ -327,11 +346,22 @@ export function TaskGrid() {
           }
           
           return (
-            <div
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded"
-              onClick={() => setEditingCell({ taskId: row.original.id, field: 'reviewer' })}
-            >
-              {currentReviewer || '—'}
+            <div className="flex items-center gap-2">
+              <div
+                className="cursor-pointer hover:bg-gray-50 p-2 rounded flex-1"
+                onClick={() => setEditingCell({ taskId: row.original.id, field: 'reviewer' })}
+              >
+                {currentReviewer || '—'}
+              </div>
+              {currentReviewer && (
+                <button
+                  onClick={() => setSelectedMemberName(currentReviewer)}
+                  className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+                  title="Xem profile"
+                >
+                  <User size={16} />
+                </button>
+              )}
             </div>
           );
         }
@@ -348,11 +378,19 @@ export function TaskGrid() {
       }),
       columnHelper.display({
         id: 'reviewerMatching',
-        header: 'Hợp lệ',
+        header: 'Review Status',
         cell: ({ row }) => {
           const matching = row.original.computed.reviewerMatching;
+          if (!matching) return <span className="text-gray-400">—</span>;
+          
           if (matching === '✅ Hợp lệ') {
-            return <span className="text-emerald-600">{matching}</span>;
+            return <span className="text-emerald-600 font-medium">{matching}</span>;
+          }
+          if (matching === '❌ Không hợp lệ') {
+            return <span className="text-red-600 font-medium">{matching}</span>;
+          }
+          if (matching === '⚠️ Thiếu reviewer') {
+            return <span className="text-amber-600 font-medium">{matching}</span>;
           }
           return <span className="text-gray-400">{matching}</span>;
         }
@@ -584,6 +622,18 @@ export function TaskGrid() {
           onClose={() => setSelectedTask(null)}
         />
       )}
+
+      {/* Member Profile Modal */}
+      {selectedMemberName && (() => {
+        const member = state.members.find(m => m.name === selectedMemberName);
+        return member ? (
+          <MemberProfileModal
+            member={member}
+            skillMeta={state.skillMeta}
+            onClose={() => setSelectedMemberName(null)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

@@ -73,12 +73,12 @@ export function suggestReviewers(
   skillMeta: SkillMeta[],
   configRules: ConfigRule[],
   status: 'TỰ QUYẾT' | 'CẦN REVIEW'
-): { reviewer: string; reviewFocus: string; reviewerMatching: '✅ Hợp lệ' | '—' } {
+): { reviewer: string; reviewFocus: string; reviewerMatching: '' | '✅ Hợp lệ' | '❌ Không hợp lệ' | '⚠️ Thiếu reviewer' } {
   if (status === 'TỰ QUYẾT') {
     return {
       reviewer: '',
       reviewFocus: '',
-      reviewerMatching: '—'
+        reviewerMatching: ''
     };
   }
 
@@ -94,7 +94,7 @@ export function suggestReviewers(
     return {
       reviewer: '',
       reviewFocus: '',
-      reviewerMatching: '—'
+        reviewerMatching: '⚠️ Thiếu reviewer'
     };
   }
 
@@ -156,15 +156,50 @@ export function calculateTaskData(
   const status = calculateReviewStatus(assignee, maxComplexity, configRules);
   const reviewerInfo = suggestReviewers(members, assignee, task, maxComplexity, skillGaps, skillMeta, configRules, status);
 
-  return {
-    maxComplexity,
-    skillGaps,
-    suitabilityScore,
-    status,
-    reviewer: reviewerInfo.reviewer,
-    reviewFocus: reviewerInfo.reviewFocus,
-    reviewerMatching: reviewerInfo.reviewerMatching
-  };
+    // If manual reviewer is set, validate it instead of using suggested reviewer
+    let finalReviewer = reviewerInfo.reviewer;
+    let finalReviewerMatching = reviewerInfo.reviewerMatching;
+
+    if (task.reviewer) {
+        // User has manually set a reviewer - validate it
+        finalReviewer = task.reviewer;
+
+        if (status === 'TỰ QUYẾT') {
+            // No review needed
+            finalReviewerMatching = '';
+        } else {
+            // Check if manual reviewer is valid
+            const reviewerMember = members.find(m => m.name === task.reviewer);
+            if (!reviewerMember) {
+                finalReviewerMatching = '❌ Không hợp lệ';
+            } else if (assignee && reviewerMember.id === assignee.id) {
+                // Cannot review own work
+                finalReviewerMatching = '❌ Không hợp lệ';
+            } else {
+                const reviewerRule = configRules.find(r => r.levelName === reviewerMember.currentLevel);
+                if (reviewerRule && reviewerRule.reviewAuthority >= maxComplexity) {
+                    finalReviewerMatching = '✅ Hợp lệ';
+                } else {
+                    finalReviewerMatching = '❌ Không hợp lệ';
+                }
+            }
+        }
+    } else if (status === 'CẦN REVIEW') {
+        // No manual reviewer set and needs review
+        if (!finalReviewer) {
+            finalReviewerMatching = '⚠️ Thiếu reviewer';
+        }
+    }
+
+    return {
+        maxComplexity,
+        skillGaps,
+        suitabilityScore,
+        status,
+        reviewer: finalReviewer,
+        reviewFocus: reviewerInfo.reviewFocus,
+        reviewerMatching: finalReviewerMatching
+    };
 }
 
 // Sync skills: ensure all skills in SkillMeta exist in all members
